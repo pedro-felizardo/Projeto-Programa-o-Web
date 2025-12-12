@@ -97,7 +97,7 @@ def cadastro_usuario(request):
             from .utils import enviar_email_confirmacao
             enviar_email_confirmacao(novo_usuario, request)
 
-            messages.success(request, "Cadastro realizado! Verifique seu e-mail para ativar sua conta.")
+            messages.success(request, "Cadastro realizado! O e-mail foi SIMULADO no terminal. Use o link exibido no console para ativar sua conta.")
             return redirect('login')
         else:
             messages.error(request, "Corrija os erros abaixo.")
