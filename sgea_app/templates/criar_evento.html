@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="
+    max-width: 700px;
+    margin: 40px auto;
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    font-family: Arial, Helvetica, sans-serif;
+">
+
+    <h2 style="color: #333; text-align: center; margin-bottom: 25px;">
+        Criar Novo Evento
+    </h2>
+
+    <form method="post" action="{% url 'criar_evento' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div style="
+                background: #fdd;
+                border: 1px solid red;
+                padding: 12px;
+                border-radius: 6px;
+                color: darkred;
+                margin-bottom: 20px;
+            ">
+                <h4 style="margin: 0 0 10px 0;">ERROS GERAIS DO FORMULÁRIO:</h4>
+                {% for error in form.non_field_errors %}
+                    <p style="margin: 0;">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div style="margin-bottom: 20px;">
+            {{ form.as_p }}
+        </div>
+
+        <button type="submit" style="
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 17px;
+            cursor: pointer;
+            transition: 0.2s;
+        ">
+            Cadastrar Evento
+        </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 25px;">
+        <a href="{% url 'dashboard' %}" style="color: #6c757d; font-size: 15px;">
+            Voltar para o Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

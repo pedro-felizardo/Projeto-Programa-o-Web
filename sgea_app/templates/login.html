@@ -1,0 +1,118 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SGEA</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: #fff;
+            width: 380px;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 26px;
+            color: #333;
+        }
+
+        label {
+            font-size: 15px;
+            color: #444;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            outline: none;
+            font-size: 15px;
+        }
+
+        input:focus {
+            border-color: #4c6ef5;
+        }
+
+        button {
+            width: 100%;
+            background-color: #4c6ef5;
+            color: white;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background-color: #3b5bdb;
+        }
+
+        .mensagem {
+            margin-top: 10px;
+            color: #d60000;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .link {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Entrar</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <label for="id_login">Login (E-mail)</label>
+        <input type="text" name="login" placeholder="Digite seu login" required>
+
+        <label for="id_password">Senha</label>
+        <input type="password" name="password" placeholder="Digite sua senha" required>
+
+        <button type="submit">Acessar</button>
+
+        {% if messages %}
+            <div class="mensagem">
+                {% for m in messages %}
+                    {{ m }}<br>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </form>
+
+    <a class="link" href="{% url 'cadastro_usuario' %}">Criar uma conta</a>
+</div>
+
+</body>
+</html>

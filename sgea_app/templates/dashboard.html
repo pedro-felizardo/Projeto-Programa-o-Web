@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div style="
+    max-width: 1000px;
+    margin: 30px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    font-family: Arial, Helvetica, sans-serif;
+">
+
+    <h2 style="color: #333; margin-bottom: 10px;">
+        Bem-vindo, {{ user.nome }}!
+    </h2>
+
+    <p style="font-size: 15px; color: #555; margin-bottom: 25px;">
+        Seu perfil: <strong>{{ user.perfil }}</strong>
+    </p>
+
+    {% if user.perfil == 'Organizador' %}
+        
+        <h3 style="color: #1a73e8; margin-bottom: 10px;">Ferramentas de Gerenciamento</h3>
+
+        <ul style="line-height: 1.8; margin-bottom: 30px;">
+            <li><a href="{% url 'criar_evento' %}" style="color: #1a73e8;">Criar Novo Evento</a></li>
+            <li><a href="{% url 'registros_auditoria' %}" style="color: #1a73e8;">Consultar Registros de Auditoria</a></li>
+        </ul>
+
+        <h3 style="margin-bottom: 15px; color: #333;">Meus Eventos Criados</h3>
+
+        {% if eventos_organizados %}
+            <table style="
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+                font-size: 15px;
+            ">
+                <thead>
+                    <tr style="background: #f1f1f1;">
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Nome</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Data Início</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Professor Resp.</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Vagas</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Status</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for evento in eventos_organizados %}
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 10px;">{{ evento.nome }}</td>
+                            <td style="padding: 10px;">{{ evento.data_inicial|date:"d/m/Y" }}</td>
+                            <td style="padding: 10px;">{{ evento.professor_responsavel.nome }}</td>
+                            <td style="padding: 10px;">{{ evento.quantidade_participantes }}</td>
+
+                            <td style="padding: 10px;">
+                                {% if evento.esta_encerrado %}
+                                    <span style="color: red;">Encerrado</span>
+                                {% else %}
+                                    <span style="color: green;">Ativo</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 10px;">
+                                <a href="{% url 'editar_evento' evento.id %}" style="color: #1a73e8;">Editar</a> |
+                                <a href="{% url 'lista_inscritos' evento.id %}" style="color: #1a73e8;">Inscritos</a>
+
+                                {% if evento.esta_encerrado %}
+                                    | <a href="{% url 'emitir_certificados' evento.id %}" style="color: #1a73e8;">Emitir Certificados</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% else %}
+            <p style="color: #777;">Nenhum evento criado até o momento.</p>
+        {% endif %}
+    {% endif %}
+
+    {% if user.perfil == 'Aluno' or user.perfil == 'Professor' %}
+        <h3 style="margin-top: 30px; color: #333;">Minhas Inscrições</h3>
+
+        {% if minhas_inscricoes %}
+            <table style="
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                font-size: 15px;
+            ">
+                <thead>
+                    <tr style="background: #f1f1f1;">
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Evento</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Data</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Status</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ccc;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inscricao in minhas_inscricoes %}
+                        {% with evento=inscricao.evento %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px;">{{ evento.nome }} ({{ evento.tipo_evento }})</td>
+                                <td style="padding: 10px;">{{ evento.data_inicial|date:"d/m/Y" }}</td>
+                                <td style="padding: 10px;">
+                                    {% if evento.esta_encerrado %}
+                                        <span style="color: red;">Encerrado</span>
+                                    {% else %}
+                                        <span style="color: green;">Ativo</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 10px;">
+                                    {% if not evento.esta_encerrado %}
+                                        <form method="post" action="{% url 'desinscrever_evento' evento.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" 
+                                                style="background: none; border: none; color: red; cursor: pointer;"
+                                                onclick="return confirm('Tem certeza que deseja cancelar sua inscrição no evento {{ evento.nome }}?');">
+                                                Desinscrever
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: #777;">Você não está inscrito em nenhum evento no momento.</p>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+{% endblock %}

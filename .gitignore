@@ -1,0 +1,57 @@
+# Arquivo .gitignore para Projetos Django/Python
+
+# --------------------
+# 1. Arquivos de Sistema Operacional/Ambiente
+# --------------------
+# Logs
+*.log
+**/__pycache__
+*.pyc
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Ambientes Virtuais (Virtual Environments)
+# Ignora pastas de ambiente virtual, pois elas devem ser recriadas por 'requirements.txt'
+venv/
+env/
+/bin/
+/include/
+/lib/
+/lib64/
+
+# --------------------
+# 2. Python / Django Específicos
+# --------------------
+# Arquivos de bytecode (python)
+*.py[cod]
+# Distribuição e construção de arquivos
+/dist
+/build
+# Arquivos gerados pelo coverage
+.coverage
+
+# --------------------
+# 3. Django Específicos
+# --------------------
+# Banco de dados SQLite padrão do Django
+db.sqlite3
+/media
+/static
+
+# Arquivos de configurações sensíveis
+.env
+# NÃO envie senhas ou chaves secretas para o Git!
+# Se você usa um arquivo de ambiente ou configuração secreta:
+# settings_local.py
+# .env
+# .envs/
+# SECRET_KEY.txt
+
+# Arquivos de migração (exceto __init__.py)
+# Isso ignora os arquivos gerados dentro de cada pasta 'migrations',
+# mas mantém o esqueleto necessário para o Django.
+*/migrations/*.py
+!*/migrations/__init__.py
+!*/migrations/0001_initial.py # Geralmente o primeiro é útil para referência

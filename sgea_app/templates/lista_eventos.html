@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <h2 class="page-title">{{ title }}</h2>
+
+    {% if eventos %}
+
+        {% for evento in eventos %}
+        <div class="card evento-card">
+
+            <div class="evento-info">
+                <div class="evento-header">
+                    {% if evento.banner %}
+                        <img src="{{ evento.banner.url }}" alt="Banner do Evento" class="evento-banner">
+                    {% endif %}
+                    <h3>{{ evento.nome }} ({{ evento.tipo_evento }})</h3>
+                </div>
+
+                <p><strong>Local:</strong> {{ evento.local }}</p>
+                <p>
+                    <strong>Data:</strong> {{ evento.data_inicial|date:"d/m/Y" }} 
+                    – {{ evento.data_final|date:"d/m/Y" }}
+                    | <strong>Horário:</strong> {{ evento.horario }}
+                </p>
+                <p><strong>Vagas Disponíveis:</strong> {{ evento.quantidade_participantes }}</p>
+
+                <a href="{% url 'inscrever_evento' evento.id %}" class="btn-success">
+                    Inscrever-se no Evento
+                </a>
+            </div>
+
+            <div class="evento-extra">
+                <h4>Informações de Contato</h4>
+                <p><strong>Professor Responsável:</strong> {{ evento.professor_responsavel.nome }}</p>
+                <p><strong>Organizador:</strong> {{ evento.organizador.nome }}</p>
+            </div>
+
+        </div>
+        {% endfor %}
+
+    {% else %}
+        <p>Nenhum evento futuro disponível no momento.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SGEA - Sistema de Gestão de Eventos Acadêmicos{% endblock %}</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f4f6f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
+        }
+
+        /* HEADER */
+        header {
+            background: #1a73e8;
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: normal;
+        }
+
+        /* NAVBAR */
+        nav a,
+        nav button {
+            color: white;
+            margin-left: 15px;
+            text-decoration: none;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+
+        nav a:hover,
+        nav button:hover {
+            opacity: 0.7;
+        }
+
+        nav button {
+            cursor: pointer;
+        }
+
+        /* MAIN CONTENT */
+        main {
+            padding: 30px 20px;
+            min-height: 70vh;
+        }
+
+        /* MESSAGES */
+        .messages {
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+            padding: 0;
+        }
+
+        .messages li {
+            list-style: none;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            font-size: 15px;
+            border: 1px solid transparent;
+        }
+
+        .messages li.error {
+            background: #fdd;
+            border-color: red;
+            color: darkred;
+        }
+
+        .messages li.success {
+            background: #dfd;
+            border-color: green;
+            color: darkgreen;
+        }
+
+        .messages li.info,
+        .messages li.warning {
+            background: #ffeeba;
+            border-color: #d39e00;
+            color: #7a5f00;
+        }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 12px;
+            background: #f1f1f1;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+
+</head>
+<body>
+
+    <header>
+        <h1>SGEA</h1>
+
+        <nav>
+            {% if user.is_authenticated %}
+                {% if user.perfil == 'Aluno' or user.perfil == 'Professor' %}
+                    <a href="{% url 'home' %}">Início</a> 
+                    <a href="{% url 'meus_certificados' %}">Meus Certificados</a>
+                {% endif %}
+
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+
+                {% if user.perfil == 'Organizador' %}
+                    <a href="{% url 'registros_auditoria' %}">Auditoria</a>
+                {% endif %}
+
+                <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 15px;
+                        margin-left: 15px;
+                    ">
+                        Sair
+                    </button>
+                </form>
+
+            {% else %}
+                <a href="{% url 'home' %}">Início</a>
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'cadastro_usuario' %}">Cadastrar</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">
+                        {{ message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 SGEA. Todos os direitos reservados.</p>
+    </footer>
+
+</body>
+</html>

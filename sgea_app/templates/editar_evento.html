@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="page-title">{{ title }}</h2>
+
+    <form method="post" action="{% url 'editar_evento' evento_id %}" enctype="multipart/form-data" class="form-box">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            <h4>Erros no formulário:</h4>
+            {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            {{ form.as_p }}
+        </div>
+
+        <button type="submit" class="btn-primary">Salvar Alterações</button>
+    </form>
+
+    <p>
+        <a href="{% url 'dashboard' %}" class="link-back">Cancelar e voltar ao Dashboard</a>
+    </p>
+</div>
+{% endblock %}
