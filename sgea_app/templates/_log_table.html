@@ -1,0 +1,27 @@
+<h3 style="margin-top: 30px; color: #1a73e8; border-bottom: 2px solid #eee; padding-bottom: 5px;">
+    {{ log_title }}
+    ({{ logs|length }} registros recentes)
+</h3>
+
+{% if logs %}
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px;">
+        <thead>
+            <tr style="background: #f1f1f1;">
+                <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left; width: 15%;">Data/Hora</th>
+                <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left; width: 25%;">Usuário</th>
+                <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left; width: 60%;">Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;">{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
+                    <td style="padding: 10px;">{{ log.usuario.nome }} ({{ log.usuario.perfil }})</td>
+                    <td style="padding: 10px;">{{ log.acao }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p style="color: #777;">Nenhum registro encontrado nesta categoria.</p>
+{% endif %}

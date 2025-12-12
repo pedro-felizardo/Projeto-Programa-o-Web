@@ -80,20 +80,20 @@ def detalhe_evento(request, evento_id):
 
 def cadastro_usuario(request):
     """ 
-    Formulário para cadastro de novos usuários (rota: /cadastro/). 
-    Aplica validações do forms.py, define is_active=False e simula envio de e-mail.
+    Formulário para cadastro de novos usuários. 
+    Adicionado: Registro de Auditoria.
     """
     if request.method == 'POST':
         form = CadastroUsuarioForm(request.POST)
         if form.is_valid():
-            # A função save no forms.py já hasheia a senha
             novo_usuario = form.save(commit=False)
+            novo_usuario.is_active = False 
+            novo_usuario.save() 
             
-            # Regra de Negócio: Novo usuário começa como inativo (is_active=False)
-            # até a confirmação por e-mail.
-            novo_usuario.is_active = True
-            novo_usuario.save()
-
+            # ** 🛠️ LOG DE CRIAÇÃO DE USUÁRIO CORRIGIDO **
+            acao = f"Criação de novo usuário: {novo_usuario.login} (Perfil: {novo_usuario.perfil})"
+            log_auditoria(novo_usuario, acao) 
+            
             from .utils import enviar_email_confirmacao
             enviar_email_confirmacao(novo_usuario, request)
 
@@ -207,9 +207,14 @@ def inscrever_evento(request, evento_id):
         messages.error(request, f"O evento '{evento.nome}' atingiu o limite de vagas.")
         return redirect('home')
     
+    # 5. Criar Inscrição
     try:
-        # 5. Criar Inscrição
         Inscricao.objects.create(usuario=usuario, evento=evento)
+        
+        # ** 🛠️ LOG DE INSCRIÇÃO CORRIGIDO **
+        acao = f"Inscrição no evento: {evento.nome}"
+        log_auditoria(usuario, acao) 
+        
         messages.success(request, f"Inscrição no evento '{evento.nome}' realizada com sucesso!")
         
     except Exception as e:
@@ -319,24 +324,33 @@ __________________________________________________________________
 
 # --- Rotas de Organizador ---
 
+# sgea_app/views.py - Função criar_evento (Adição do log)
+
+# Certifique-se que log_auditoria está importado no topo:
+# from .utils import log_auditoria 
+
 @login_required
 @user_passes_test(is_organizador)
 def criar_evento(request):
     """ 
-    Formulário para criar um novo evento (rota: /eventos/novo/).
-    Aplica validações de data e banner (implementadas no forms.py).
+    Formulário para criar um novo evento.
+    Adicionado: Registro de Auditoria.
     """
     if request.method == 'POST':
-        form = FormularioEvento(request.POST, request.FILES) # Usa request.FILES para o banner
+        form = FormularioEvento(request.POST, request.FILES) 
         if form.is_valid():
             evento = form.save(commit=False)
-            
-            # Define o organizador responsável como o usuário logado 
             evento.organizador = request.user 
             evento.save()
             
-            # Redireciona para a lista de gerenciamento de eventos
+            # ** 🛠️ LOG DE CRIAÇÃO DE EVENTO **
+            acao = f"Cadastro do evento: {evento.nome} (Organizador: {request.user.nome})"
+            log_auditoria(request.user, acao)
+            
+            messages.success(request, f"Evento '{evento.nome}' criado com sucesso!")
             return redirect('dashboard') 
+        else:
+            messages.error(request, "Houve erros na validação. Verifique os campos abaixo.")
     else:
         form = FormularioEvento()
         
@@ -347,21 +361,24 @@ def criar_evento(request):
 def editar_evento(request, evento_id):
     """ 
     Formulário para editar um evento existente.
+    Adicionado: Registro de Auditoria.
     """
-    # 1. Busca o evento ou retorna 404
     evento = get_object_or_404(Evento, pk=evento_id, organizador=request.user)
     
-    # 2. Processa a submissão
     if request.method == 'POST':
-        # Instancia o formulário com os dados POST, arquivos e a instância do objeto
         form = FormularioEvento(request.POST, request.FILES, instance=evento)
         if form.is_valid():
-            # A view de criação não precisa definir 'organizador' aqui, pois ele já está
-            # na instância 'evento' e o formulário o mantém.
             form.save()
+            
+            # ** 🛠️ LOG DE EDIÇÃO DE EVENTO **
+            acao = f"Alteração do evento: {evento.nome} (Organizador: {request.user.nome})"
+            log_auditoria(request.user, acao)
+            
+            messages.success(request, f"Evento '{evento.nome}' atualizado com sucesso!")
             return redirect('dashboard') 
+        else:
+            messages.error(request, "Houve erros na validação. Verifique os campos abaixo.")
     else:
-        # 3. Exibe o formulário preenchido (GET)
         form = FormularioEvento(instance=evento)
         
     context = {
@@ -369,7 +386,6 @@ def editar_evento(request, evento_id):
         'title': f'Editar Evento: {evento.nome}',
         'evento_id': evento.id
     }
-    # O template 'editar_evento.html' será o próximo a ser criado
     return render(request, 'editar_evento.html', context)
 
 @login_required
@@ -480,36 +496,68 @@ def emitir_certificados(request, evento_id):
 def registros_auditoria(request):
     """ 
     Tela para consultar logs de auditoria (rota: /auditoria/). 
-    Permite filtrar por data e usuário.
+    Lista logs em 5 tabelas separadas por tipo de ação.
     """
     
-    # 1. Filtros
-    data_filtro = request.GET.get('data')
-    usuario_filtro_id = request.GET.get('usuario')
+    # Base Query: Filtrar apenas ações com conteúdo relevante para a auditoria
+    base_logs = RegistroAuditoria.objects.all().select_related('usuario').order_by('-data_hora')
     
-    # Inicia com todos os logs, ordenados do mais novo para o mais antigo (definido no model Meta)
-    logs = RegistroAuditoria.objects.all().select_related('usuario')
+    # 1. Usuários Criados
+    # Ação: "Criação de novo usuário:..."
+    logs_usuarios_criados = base_logs.filter(
+        acao__startswith='Criação de novo usuário:'
+    )[:50] # Limita a 50 para performance
+
+    # 2. Gerenciamento de Eventos (Cadastro, Alteração, Exclusão)
     
-    # 2. Aplica Filtros
-    if data_filtro:
-        try:
-            # Filtra por data exata
-            logs = logs.filter(data_hora__date=data_filtro)
-        except ValueError:
-            # Caso a data seja inválida, apenas ignora
-            messages.warning(request, "Formato de data inválido.")
-            
-    if usuario_filtro_id and usuario_filtro_id.isdigit():
-        logs = logs.filter(usuario_id=usuario_filtro_id)
-        
-    # 3. Lista de usuários para o dropdown de filtro
-    usuarios_disponiveis = Usuario.objects.all().order_by('nome')
+    # Lista de prefixos a serem buscados
+    prefixos_eventos = [
+        'Cadastro do evento:', 
+        'Alteração do evento:', 
+        'Exclusão do evento:', 
+        'Emissão MANUAL de'
+    ]
+    
+    # Constrói o Q object: (acao__startswith='Cadastro...') OR (acao__startswith='Alteração...') OR ...
+    # O reduce é uma forma concisa de combinar todos com o operador OR (|)
+    from functools import reduce # Precisa ser importado no topo se não estiver
+    
+    # Criamos a condição Q object combinada com OR (|)
+    condicoes_eventos = [Q(acao__startswith=prefixo) for prefixo in prefixos_eventos]
+    
+    logs_eventos_gerenciados = base_logs.filter(
+        reduce(lambda x, y: x | y, condicoes_eventos)
+    )[:50]
+
+    # 3. Consultas à API
+    # Ação: "Consulta de Eventos via API"
+    logs_api_consultas = base_logs.filter(
+        acao__icontains='via API' # Busca qualquer ação que mencione 'via API' (consulta ou inscrição)
+    ).exclude(
+        acao__startswith='Inscrição'
+    )[:50]
+    
+    # 4. Certificados (Emissão e Download)
+    # Ação: "Geração de X certificados..." ou "Download do certificado..."
+    logs_certificados = base_logs.filter(
+        acao__icontains='certificado' # Busca qualquer ação que mencione 'certificado'
+    )[:50]
+    
+    # 5. Inscrições em Eventos
+    # Ação: "Inscrição no evento:..."
+    logs_inscricoes = base_logs.filter(
+        acao__startswith='Inscrição no evento:'
+    ).exclude(
+        acao__icontains='via API' # Exclui se a inscrição foi feita via API (já coberta pelo item 3)
+    )[:50]
 
     context = {
-        'logs': logs[:200], # Limita a exibição para performance
-        'usuarios_disponiveis': usuarios_disponiveis,
-        'data_filtro': data_filtro,
-        'usuario_filtro_id': usuario_filtro_id,
-        'title': 'Registros de Auditoria'
+        'title': 'Registros de Auditoria Detalhada',
+        'logs_usuarios_criados': logs_usuarios_criados,
+        'logs_eventos_gerenciados': logs_eventos_gerenciados,
+        'logs_api_consultas': logs_api_consultas,
+        'logs_certificados': logs_certificados,
+        'logs_inscricoes': logs_inscricoes,
     }
+    
     return render(request, 'registros_auditoria.html', context)
