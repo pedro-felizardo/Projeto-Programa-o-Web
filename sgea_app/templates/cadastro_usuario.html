@@ -66,5 +66,26 @@
         </p>
     </div>
 
-</div>
+    </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const phoneInput = document.querySelector("input[name='telefone'], input[id*='telefone'], input[name*='phone'], input[id*='phone']");
+
+        if (phoneInput) {
+            phoneInput.addEventListener("input", function (e) {
+                let value = e.target.value.replace(/\D/g, ""); // remove tudo que não for dígito
+
+                if (value.length > 11) value = value.substring(0, 11); // limita a 11 dígitos
+
+                if (value.length > 6) {
+                    e.target.value = value.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+                } else if (value.length > 2) {
+                    e.target.value = value.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+                } else {
+                    e.target.value = value.replace(/(\d{0,2})/, "($1");
+                }
+            });
+        }
+    });
+    </script>
 {% endblock %}

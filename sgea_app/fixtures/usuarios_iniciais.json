@@ -1,0 +1,44 @@
+[
+  {
+    "model": "sgea_app.usuario",
+    "pk": 1,
+    "fields": {
+      "nome": "Organizador Teste",
+      "login": "organizador@sgea.com",
+      "email": "organizador@sgea.com",
+      "telefone": "123456789",
+      "instituicao_ensino": "SGEA University",
+      "perfil": "Organizador",
+      "is_active": true,
+      "password": "pbkdf2_sha256$1000000$YBavTpWjd6IK8VXg09Fxjg$VO0Nl/VXOIfKZDn7PuidG+0vXRDgjn+XzDgSYNg+6ic="
+    }
+  },
+  {
+    "model": "sgea_app.usuario",
+    "pk": 2,
+    "fields": {
+      "nome": "Aluno Teste",
+      "login": "aluno@sgea.com",
+      "email": "aluno@sgea.com",
+      "telefone": "987654321",
+      "instituicao_ensino": "SGEA University",
+      "perfil": "Aluno",
+      "is_active": true,
+      "password": "pbkdf2_sha256$1000000$hSOCz11jmFifW1OhRUxNLV$T41iTFpIw9QjVEhNZFMnUpu08g7oMlt7PlticWq+DCI="
+    }
+  },
+  {
+    "model": "sgea_app.usuario",
+    "pk": 3,
+    "fields": {
+      "nome": "Professor Teste",
+      "login": "professor@sgea.com",
+      "email": "professor@sgea.com",
+      "telefone": "555555555",
+      "instituicao_ensino": "SGEA University",
+      "perfil": "Professor",
+      "is_active": true,
+      "password": "pbkdf2_sha256$1000000$BP1Fp2LMOHAUc4aq3tdkfs$WuatkzAN0MlHVXEpqUmbf6SbfGczG1nYGZn2iLHTx2Q="
+    }
+  }
+]
