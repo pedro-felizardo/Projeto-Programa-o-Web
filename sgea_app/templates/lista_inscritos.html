@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+">
+
+    <h2 style="color: #333; margin-bottom: 10px;">{{ title }}</h2>
+    <p style="font-size: 15px; color: #555; margin-bottom: 25px;">
+        Professor Responsável: <strong>{{ evento.professor_responsavel.nome }}</strong>
+    </p>
+
+    <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+        <p><strong>Total de Inscritos:</strong> {{ total_inscritos }} / {{ evento.quantidade_participantes }}</p>
+        <p><strong>Vagas Restantes:</strong>
+            {% if vagas_restantes > 0 %}
+                <span style="color: green; font-weight: bold;">{{ vagas_restantes }}</span>
+            {% else %}
+                <span style="color: red; font-weight: bold;">{{ vagas_restantes }}</span>
+            {% endif %}
+        </p>
+    </div>
+    
+    {% if inscritos %}
+        <table style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        ">
+            <thead>
+                <tr style="background: #f1f1f1;">
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left;">Nome do Participante</th>
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left;">Perfil</th>
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: center;">Presença Confirmada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inscricao in inscritos %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ inscricao.usuario.nome }}</td>
+                        <td style="padding: 12px;">{{ inscricao.usuario.perfil }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <form method="post" action="{% url 'lista_inscritos' evento.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="inscricao_id" value="{{ inscricao.id }}">
+                                
+                                {% if inscricao.presenca_confirmada %}
+                                    <input type="hidden" name="confirmar_presenca" value="false">
+                                    <button type="submit" style="
+                                        background: #28a745; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;
+                                    ">Confirmado</button>
+                                {% else %}
+                                    <input type="hidden" name="confirmar_presenca" value="true">
+                                    <button type="submit" style="
+                                        background: #ffc107; color: #333; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;
+                                    ">Confirmar</button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color: #777;">Ainda não há inscritos neste evento.</p>
+    {% endif %}
+
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{% url 'dashboard' %}" style="color: #6c757d; font-size: 15px;">
+            Voltar para o Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

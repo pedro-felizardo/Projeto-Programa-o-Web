@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 30px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+">
+
+    <h2 style="color: #333; margin-bottom: 25px;">{{ title }}</h2>
+    <p style="font-size: 15px; color: #555; margin-bottom: 25px;">
+        Ações críticas registradas no sistema (últimos 200).
+    </p>
+
+    <form method="get" action="{% url 'registros_auditoria' %}" style="margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
+        <h3 style="margin-top: 0; font-size: 18px; color: #1a73e8;">Filtrar Logs </h3>
+        <div style="display: flex; gap: 20px; align-items: flex-end;">
+            
+            <div style="flex-grow: 1;">
+                <label for="id_data" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Filtrar por Data:</label>
+                <input type="date" name="data" id="id_data" value="{{ data_filtro }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+
+            <div style="flex-grow: 2;">
+                <label for="id_usuario" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Filtrar por Usuário:</label>
+                <select name="usuario" id="id_usuario" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="">-- Todos os Usuários --</option>
+                    {% for usuario in usuarios_disponiveis %}
+                        <option value="{{ usuario.id }}" {% if usuario.id|stringformat:"i" == usuario_filtro_id %}selected{% endif %}>
+                            {{ usuario.nome }} ({{ usuario.perfil }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" style="
+                padding: 8px 15px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer;
+            ">Aplicar Filtros</button>
+            <a href="{% url 'registros_auditoria' %}" style="
+                padding: 8px 15px; background: #6c757d; color: white; border-radius: 4px; text-decoration: none;
+            ">Limpar</a>
+        </div>
+    </form>
+
+
+    {% if logs %}
+        <table style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        ">
+            <thead>
+                <tr style="background: #f1f1f1;">
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left; width: 150px;">Data e Hora</th>
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left; width: 250px;">Usuário</th>
+                    <th style="padding: 12px; border-bottom: 1px solid #ccc; text-align: left;">Ação Crítica </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
+                        <td style="padding: 12px;">{{ log.usuario.nome }} ({{ log.usuario.perfil }})</td>
+                        <td style="padding: 12px;">{{ log.acao }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color: #777;">Nenhum registro de auditoria encontrado com os filtros aplicados.</p>
+    {% endif %}
+
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{% url 'dashboard' %}" style="color: #6c757d; font-size: 15px;">
+            Voltar para o Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

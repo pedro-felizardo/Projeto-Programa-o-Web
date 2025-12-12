@@ -2,6 +2,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.conf import settings
 from .tokens import token_ativacao
+from .models import RegistroAuditoria
 
 def enviar_email_confirmacao(usuario, request):
     token = token_ativacao.make_token(usuario)
@@ -47,3 +48,15 @@ Ativar Conta
         [usuario.email],
         html_message=html
     )
+
+def log_auditoria(usuario, acao):
+    """
+    Função auxiliar para registrar uma ação crítica no banco de dados.
+    """
+    try:
+        # Cria o registro, aceitando usuario=None para ações do sistema/deslogadas
+        RegistroAuditoria.objects.create(usuario=usuario, acao=acao)
+    except Exception as e:
+        # Em caso de erro de log, apenas printa (não deve quebrar a requisição principal)
+        print(f"ERRO DE LOG DE AUDITORIA: {e}") 
+        pass

@@ -149,3 +149,34 @@ class Certificado(models.Model):
 
     def __str__(self):
         return f"Certificado para {self.inscricao.usuario.nome} - Status: {self.status_emissao}"
+
+
+
+# sgea_app/models.py (Adicionar no final)
+
+class RegistroAuditoria(models.Model):
+    """
+    Modelo para registrar ações críticas dos usuários para auditoria.
+    Requisito: Rastreadilidade e segurança (item 10 da Fase 2).
+    """
+    # Usuário que realizou a ação. Permite NULL se for uma ação do sistema 
+    # ou se o usuário for deletado (embora neste projeto a exclusão de 
+    # usuário seja rara).
+    usuario = models.ForeignKey('Usuario', on_delete=models.SET_NULL, null=True, 
+                                verbose_name="Usuário da Ação", related_name='registros_auditoria')
+    
+    # A descrição da ação (e.g., "Criação de novo usuário", "Exclusão do Evento X")
+    acao = models.CharField(max_length=255, verbose_name="Ação Crítica")
+    
+    # Data e hora exatas da ação.
+    data_hora = models.DateTimeField(auto_now_add=True, verbose_name="Data e Hora")
+    
+    class Meta:
+        verbose_name = "Registro de Auditoria"
+        verbose_name_plural = "Registros de Auditoria"
+        # Ordena para que as ações mais recentes apareçam primeiro na consulta.
+        ordering = ['-data_hora'] 
+
+    def __str__(self):
+        # Para fácil visualização no admin ou no shell
+        return f"[{self.data_hora.strftime('%d/%m/%Y %H:%M')}] {self.usuario.nome if self.usuario else 'Sistema'} - {self.acao}"

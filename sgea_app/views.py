@@ -6,10 +6,12 @@ from django.contrib.auth import logout
 from django.utils import timezone
 from .forms import * 
 from .models import *
+from .utils import log_auditoria
 from django.contrib.auth import get_user_model
 from .tokens import token_ativacao
 from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse
+from django.db.models import Q
 # Importe o forms.py que criamos no passo anterior.
 
 # --- Funções Auxiliares de Permissão ---
@@ -245,14 +247,75 @@ def desinscrever_evento(request, evento_id):
     return redirect('dashboard')
 
 @login_required
-@user_passes_test(is_aluno_or_professor) # Apenas Aluno ou Professor
+@user_passes_test(is_aluno_or_professor)
 def meus_certificados(request):
-    """ 
-    Lista os certificados do usuário (rota: /meus_certificados/).
-    Permitido para Alunos e Professores.
     """
-    # Lógica futura: Buscar Certificados onde presenca_confirmada=True
-    return HttpResponse("Página de Meus Certificados")
+    Lista todos os certificados disponíveis para o usuário logado e 
+    gerencia o download do certificado.
+    """
+    
+    # ----------------------------------------------------
+    # 1. Lógica de DOWNLOAD (Acionada por um parâmetro na URL)
+    # ----------------------------------------------------
+    if 'download' in request.GET:
+        certificado_id = request.GET.get('download')
+        
+        # Garante que o usuário só pode baixar seus próprios certificados
+        certificado = get_object_or_404(
+            Certificado, 
+            pk=certificado_id, 
+            inscricao__usuario=request.user
+        )
+        
+        # Log de Auditoria: Registro da consulta/download
+        log_auditoria(
+            request.user, 
+            f'Download do certificado {certificado.id} para o evento {certificado.inscricao.evento.nome}'
+        )
+
+        # ** SIMULAÇÃO DA CRIAÇÃO E ENTREGA DO ARQUIVO **
+        
+        # Conteúdo do certificado (usando o texto gerado na emissão)
+        conteudo_certificado = f"""
+SGEA - Sistema de Gestão de Eventos Acadêmicos
+__________________________________________________________________
+
+{certificado.texto_certificado}
+
+Data de Emissão: {certificado.data_emissao.strftime('%d/%m/%Y')}
+Status: Emitido e Válido.
+__________________________________________________________________
+
+"""
+        # Cria a resposta HTTP
+        response = HttpResponse(
+            conteudo_certificado, 
+            content_type='text/plain' # text/plain SIMULA um arquivo. Para PDF real, seria 'application/pdf'
+        )
+        
+        # Define o cabeçalho para forçar o download no navegador
+        nome_arquivo = f"certificado_{certificado.inscricao.evento.nome.replace(' ', '_')}_{request.user.nome.replace(' ', '_')}.txt"
+        response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+        
+        return response
+
+    # ----------------------------------------------------
+    # 2. Lógica de LISTAGEM (Padrão, se não houver 'download')
+    # ----------------------------------------------------
+    
+    # Busca todos os certificados vinculados às inscrições do usuário logado
+    certificados = Certificado.objects.filter(
+        inscricao__usuario=request.user
+    ).select_related(
+        'inscricao__evento' # Otimiza a busca para acessar dados do Evento
+    )
+    
+    context = {
+        'certificados': certificados,
+        'perfil': request.user.perfil # Útil para o template
+    }
+    
+    return render(request, 'meus_certificados.html', context)
 
 # --- Rotas de Organizador ---
 
@@ -316,24 +379,137 @@ def lista_inscritos(request, evento_id):
     Lista de participantes inscritos em um evento (rota: /evento/<id>/inscritos/). 
     Permite ao Organizador confirmar presença.
     """
-    # Lógica futura: Buscar todas as Inscrições para o Evento.
-    return HttpResponse(f"Lista de Inscritos para o Evento ID: {evento_id}")
+    
+    # 1. Garante que o Organizador só veja eventos que ele criou
+    evento = get_object_or_404(Evento, pk=evento_id, organizador=request.user)
+    
+    # 2. Lógica de Confirmação de Presença
+    if request.method == 'POST':
+        inscricao_id = request.POST.get('inscricao_id')
+        confirmar_presenca = request.POST.get('confirmar_presenca') == 'true'
+        
+        inscricao = get_object_or_404(Inscricao, pk=inscricao_id, evento=evento)
+        
+        # Se for para confirmar e ainda não estiver confirmado
+        if confirmar_presenca and not inscricao.presenca_confirmada:
+            inscricao.presenca_confirmada = True
+            inscricao.save()
+            messages.success(request, f"Presença de {inscricao.usuario.nome} confirmada!")
+            # Não é necessário logar aqui, pois é uma ação de gerenciamento interna.
+        
+        # Se for para remover a confirmação e já estiver confirmado
+        elif not confirmar_presenca and inscricao.presenca_confirmada:
+            inscricao.presenca_confirmada = False
+            inscricao.save()
+            messages.success(request, f"Presença de {inscricao.usuario.nome} desconfirmada!")
+        
+        # Redireciona para o GET da página para evitar submissão duplicada
+        return redirect('lista_inscritos', evento_id=evento_id) 
+
+    # 3. Busca todas as Inscrições para o Evento
+    inscritos = Inscricao.objects.filter(evento=evento).select_related('usuario').order_by('usuario__nome')
+    
+    # 4. Cálculo de Vagas
+    total_inscritos = inscritos.count()
+    vagas_restantes = evento.quantidade_participantes - total_inscritos
+    
+    context = {
+        'evento': evento,
+        'inscritos': inscritos,
+        'total_inscritos': total_inscritos,
+        'vagas_restantes': vagas_restantes,
+        'title': f'Inscritos no Evento: {evento.nome}'
+    }
+    return render(request, 'lista_inscritos.html', context)
+
 
 @login_required
 @user_passes_test(is_organizador)
 def emitir_certificados(request, evento_id):
     """ 
-    Gera certificados para o evento (rota: /evento/<id>/emitir_certificados/).
-    Apenas para inscritos com presença_confirmada=True.
+    Gera certificados para o evento, independentemente da data_final,
+    desde que a presença esteja confirmada.
     """
-    # Lógica futura: Disparar a automação de emissão de certificados.
-    return HttpResponse(f"Processando Emissão de Certificados para o Evento ID: {evento_id}")
+    evento = get_object_or_404(Evento, pk=evento_id, organizador=request.user)
+    
+    # 1. REMOVEMOS A VERIFICAÇÃO DE DATA: O ORGANIZADOR AGORA PODE EMITIR QUANDO QUISER.
+    
+    # OBSERVAÇÃO: Manter a lógica de que "o evento precisa ter terminado"
+    # é importante para o requisito de Emissão Automática de Certificados.
+    # Ao removermos esta verificação aqui, assumimos que o Organizador 
+    # está fazendo o processo MANUALMENTE.
+        
+    # 2. Busca Inscrições com presença confirmada E que AINDA NÃO têm certificado
+    inscricoes_prontas = Inscricao.objects.filter(
+        evento=evento, 
+        presenca_confirmada=True
+    ).exclude(
+        certificado__isnull=False
+    )
+    
+    # ... (o resto da lógica de geração de certificado permanece igual) ...
+    
+    certificados_emitidos = 0
+    
+    # 3. Processo de Geração (Automação Simulada)
+    for inscricao in inscricoes_prontas:
+        # Conteúdo do certificado
+        texto_base = f"Certificamos que {inscricao.usuario.nome} participou do evento {evento.nome}, organizado por {evento.organizador.nome}."
+        
+        Certificado.objects.create(
+            inscricao=inscricao,
+            texto_certificado=texto_base,
+            status_emissao='Emitido',
+            # ...
+        )
+        certificados_emitidos += 1
+        
+    # 4. Log de Auditoria
+    from .utils import log_auditoria
+    log_auditoria(request.user, f'Emissão MANUAL de {certificados_emitidos} certificados para o evento {evento.nome}')
+    
+    if certificados_emitidos > 0:
+        messages.success(request, f"Emissão concluída! {certificados_emitidos} novos certificados foram gerados.")
+    else:
+        messages.info(request, "Nenhum novo certificado foi emitido (Verifique se a presença foi confirmada).")
+        
+    return redirect('lista_inscritos', evento_id=evento_id)
     
 @login_required
 @user_passes_test(is_organizador)
 def registros_auditoria(request):
     """ 
     Tela para consultar logs de auditoria (rota: /auditoria/). 
-    Requer acesso ao sistema de logs (futuramente).
+    Permite filtrar por data e usuário.
     """
-    return HttpResponse("Página de Registros de Auditoria (Logs)")
+    
+    # 1. Filtros
+    data_filtro = request.GET.get('data')
+    usuario_filtro_id = request.GET.get('usuario')
+    
+    # Inicia com todos os logs, ordenados do mais novo para o mais antigo (definido no model Meta)
+    logs = RegistroAuditoria.objects.all().select_related('usuario')
+    
+    # 2. Aplica Filtros
+    if data_filtro:
+        try:
+            # Filtra por data exata
+            logs = logs.filter(data_hora__date=data_filtro)
+        except ValueError:
+            # Caso a data seja inválida, apenas ignora
+            messages.warning(request, "Formato de data inválido.")
+            
+    if usuario_filtro_id and usuario_filtro_id.isdigit():
+        logs = logs.filter(usuario_id=usuario_filtro_id)
+        
+    # 3. Lista de usuários para o dropdown de filtro
+    usuarios_disponiveis = Usuario.objects.all().order_by('nome')
+
+    context = {
+        'logs': logs[:200], # Limita a exibição para performance
+        'usuarios_disponiveis': usuarios_disponiveis,
+        'data_filtro': data_filtro,
+        'usuario_filtro_id': usuario_filtro_id,
+        'title': 'Registros de Auditoria'
+    }
+    return render(request, 'registros_auditoria.html', context)
